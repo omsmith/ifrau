@@ -37,7 +37,7 @@ describe('host', () => {
 
 	describe('methods', () => {
 
-		let host, callback, onEvent, sendEventRaw, element, resizerClose;
+		let host, callback, onEvent, onRequest, sendEventRaw, element, resizerClose;
 
 		beforeEach(() => {
 			global.window = {
@@ -57,12 +57,14 @@ describe('host', () => {
 			element = { appendChild: sinon.spy() };
 			host = new Host(() => element, 'http://cdn.com/app/index.html', callback);
 			onEvent = sinon.spy(host, 'onEvent');
+			onRequest = sinon.spy(host, 'onRequest');
 			sendEventRaw = sinon.stub(host, 'sendEventRaw');
 			resizerClose = sinon.stub(host.resizer, 'close');
 		});
 
 		afterEach(() => {
 			onEvent.restore();
+			onRequest.restore();
 			sendEventRaw.restore();
 			resizerClose.restore();
 		});
@@ -75,7 +77,7 @@ describe('host', () => {
 					resizerClose.should.have.been.calledWith(host.iframe);
 					done();
 				});
-				host.receiveEvent('ready');
+				host.receiveRequest('hello', 'foo');
 			});
 
 		});
@@ -93,12 +95,17 @@ describe('host', () => {
 				global.window.addEventListener.should.have.been.called;
 			});
 
-			it('should resolve promise when "ready" event is received', (done) => {
+			it('should resolve promise when first "hello" request is received', (done) => {
 				host.connect().then(() => done());
-				host.receiveEvent('ready');
+				host.receiveRequest('hello', 'foo');
 			});
 
-			['ready', 'title', 'navigate'].forEach((evt) => {
+			it('should register for "hello" requests', () => {
+				host.connect();
+				onRequest.should.have.been.calledWith('hello');
+			});
+
+			['title', 'navigate'].forEach((evt) => {
 				it(`should register for the "${evt}" event`, () => {
 					host.connect();
 					onEvent.should.have.been.calledWith(evt);

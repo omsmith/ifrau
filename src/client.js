@@ -10,14 +10,10 @@ export default class Client extends Port {
 	}
 	connect() {
 		var me = this;
-		return new Promise((resolve, reject) => {
-
+		return new Promise((resolve) => {
 			me.open();
-			me.sendEventRaw('ready');
-
 			super.connect();
-			resolve();
-
+			resolve(me.request('hello', me.id));
 		});
 	}
 	navigate(url) {

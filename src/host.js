@@ -28,9 +28,10 @@ export default class Host extends Port {
 	connect() {
 		var me = this;
 		return new Promise((resolve, reject) => {
-			me.onEvent('ready', function() {
+			me.onRequest('hello', function(id) {
 				super.connect();
 				resolve();
+				return id;
 			}).onEvent('title', function(title) {
 				document.title = title;
 			}).onEvent('navigate', function(url) {
