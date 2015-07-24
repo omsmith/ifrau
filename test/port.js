@@ -312,11 +312,18 @@ describe('port', () => {
 			receiveRequestResponse.should.not.have.been.called;
 		});
 
+		it('should not handle different versions', () => {
+			port.receiveMessage({ data: { protocol: 'ifrau', version: 'foo' }});
+			receiveEvent.should.not.have.been.called;
+			receiveRequest.should.not.have.been.called;
+			receiveRequestResponse.should.not.have.been.called;
+		});
+
 		it('should not handle unrecognized message types', () => {
 			port.receiveMessage({
 				source: endpoint,
 				origin: targetOrigin,
-				data: { key: 'frau.foo.bar' }
+				data: { protocol: 'ifrau', version: '2.0.0', type: 'heyyy!' }
 			});
 			receiveEvent.should.not.have.been.called;
 			receiveRequest.should.not.have.been.called;
@@ -327,7 +334,7 @@ describe('port', () => {
 			port.receiveMessage({
 				source: endpoint,
 				origin: targetOrigin,
-				data: { key: 'frau.evt.myEvent', payload: ['bar', false] }
+				data: { protocol: 'ifrau', version: '2.0.0', type: 'evt', key: 'myEvent', payload: ['bar', false] }
 			});
 			receiveEvent.should.have.been.calledWith('myEvent', ['bar', false]);
 		});
@@ -336,7 +343,7 @@ describe('port', () => {
 			port.receiveMessage({
 				source: endpoint,
 				origin: targetOrigin,
-				data: { key: 'frau.req.myRequest', payload: 'foo' }
+				data: { protocol: 'ifrau', version: '2.0.0', type: 'req', key: 'myRequest', payload: 'foo' }
 			});
 			receiveRequest.should.have.been.calledWith('myRequest', 'foo');
 		});
@@ -345,7 +352,7 @@ describe('port', () => {
 			port.receiveMessage({
 				source: endpoint,
 				origin: targetOrigin,
-				data: { key: 'frau.res.myResponse', payload: 23 }
+				data: { protocol: 'ifrau', version: '2.0.0', type: 'res', key: 'myResponse', payload: 23 }
 			});
 			receiveRequestResponse
 				.should.have.been.calledWith('myResponse', 23);
@@ -524,7 +531,8 @@ describe('port', () => {
 		it('should send message', () => {
 			port.connect().request('foo');
 			sendMessage.should.have.been.calledWith(
-				'req.foo',
+				'req',
+				'foo',
 				{ id: 1, args: [] }
 			);
 		});
@@ -532,7 +540,8 @@ describe('port', () => {
 		it('should pass arguments', () => {
 			port.connect().request('foo', 'bar', true, -3);
 			sendMessage.should.have.been.calledWith(
-				'req.foo',
+				'req',
+				'foo',
 				{ id: 1, args: ['bar', true, -3] }
 			);
 		});
@@ -541,8 +550,8 @@ describe('port', () => {
 			port.connect();
 			port.request('foo');
 			port.request('bar');
-			sendMessage.should.have.been.calledWith('req.foo', { id: 1, args: [] } );
-			sendMessage.should.have.been.calledWith('req.bar', { id: 2, args: [] } );
+			sendMessage.should.have.been.calledWith('req', 'foo', { id: 1, args: [] } );
+			sendMessage.should.have.been.calledWith('req', 'bar', { id: 2, args: [] } );
 		});
 
 	});
@@ -550,9 +559,9 @@ describe('port', () => {
 	describe('sendMessage', () => {
 
 		it('should use "postMessage" to send', () => {
-			port.sendMessage('blah', 'messagePayload');
+			port.sendMessage('blah', 'halb', 'messagePayload');
 			endpoint.postMessage.should.have.been.calledWith(
-				{ key: 'frau.blah', payload: 'messagePayload' },
+				{ protocol: 'ifrau', version: '2.0.0', type: 'blah', key: 'halb', payload: 'messagePayload' },
 				targetOrigin
 			);
 		});
@@ -582,14 +591,14 @@ describe('port', () => {
 			}).to.throw(Error, 'Cannot sendEvent() before connect() has completed');
 		});
 
-		it('should "sendMessage" prepended with "evt"', () => {
+		it('should "sendMessage" with "evt"', () => {
 			port.connect().sendEvent('foo');
-			sendMessage.should.have.been.calledWith('evt.foo', []);
+			sendMessage.should.have.been.calledWith('evt', 'foo', []);
 		});
 
 		it('should pass arguments to "sendMessage"', () => {
 			port.connect().sendEvent('foo', 'bar', true, -3);
-			sendMessage.should.have.been.calledWith('evt.foo', ['bar', true, -3]);
+			sendMessage.should.have.been.calledWith('evt', 'foo', ['bar', true, -3]);
 		});
 
 		it('should return result of "sendMessage"', () => {
@@ -627,7 +636,8 @@ describe('port', () => {
 				port.sendRequestResponse('bar');
 				setTimeout(() => {
 					sendMessage.should.have.been.calledWith(
-						'res.bar',
+						'res',
+						'bar',
 						{id: 1, val: test.expect}
 					);
 					done();
@@ -667,11 +677,13 @@ describe('port', () => {
 			port.sendRequestResponse('bar');
 			setTimeout(() => {
 				sendMessage.should.have.been.calledWith(
-					'res.bar',
+					'res',
+					'bar',
 					{id: 1, val: 'hello'}
 				);
 				sendMessage.should.have.been.calledWith(
-					'res.bar',
+					'res',
+					'bar',
 					{id: 2, val: 'hello'}
 				);
 				done();
@@ -704,17 +716,18 @@ describe('port', () => {
 		[
 			{endpoint: 'a', source: 'b', expect: false },
 			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'd', expect: false },
-			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', key: undefined, expect: false },
-			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', key: 'invalid', expect: false },
-			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', key: 'foo.frau.bar', expect: false },
-			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', key: 'frau.valid', expect: true },
-			{endpoint: 'a', source: 'a', targetOrigin: '*', origin: 'c', key: 'frau.valid', expect: true }
+			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', protocol: undefined, expect: false },
+			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', protocol: 'invalid', expect: false },
+			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', protocol: 'foo.ifrau', expect: false },
+			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', protocol: 'ifrau', version: 'not', expect: false },
+			{endpoint: 'a', source: 'a', targetOrigin: 'c', origin: 'c', protocol: 'ifrau', version: '2.0.0', expect: true },
+			{endpoint: 'a', source: 'a', targetOrigin: '*', origin: 'c', protocol: 'ifrau', version: '2.0.0', expect: true }
 		].forEach((item, index) => {
 			it(`should validate origin "${index}" to "${item.expect}"`, () => {
 				var isValid = Port.validateEvent(
 					item.targetOrigin,
 					item.endpoint,
-					{ source: item.source, origin: item.origin, data: { key: item.key } }
+					{ source: item.source, origin: item.origin, data: { protocol: item.protocol, version: item.version } }
 				);
 				expect(isValid).to.equal(item.expect);
 			});

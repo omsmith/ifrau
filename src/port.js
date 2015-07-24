@@ -1,3 +1,11 @@
+const PROTOCOL_NAME = 'ifrau';
+const PROTOCOL_VERSION = '2.0.0';
+const PROTOCOL_MESSAGE_TYPES = {
+	EVENT: 'evt',
+	REQUEST: 'req',
+	RESPONSE: 'res'
+};
+
 let typeNameValidator = /^[a-zA-Z]+[a-zA-Z\-]*$/;
 
 export default class Port {
@@ -94,24 +102,32 @@ export default class Port {
 		return this;
 	}
 	receiveMessage(e) {
-
 		if(!Port.validateEvent(this.targetOrigin, this.endpoint, e)) {
 			return;
 		}
 
-		var messageType = e.data.key.substr(5,3);
-		var subType = e.data.key.substr(9);
+		const type = e.data.type;
+		const key = e.data.key;
 
-		this.debug(`received ${messageType}.${subType}`);
+		this.debug(`received message: ${type}.${key}`);
 
-		if(messageType === 'evt') {
-			this.receiveEvent(subType, e.data.payload);
-		} else if(messageType === 'req') {
-			this.receiveRequest(subType, e.data.payload);
-		} else if(messageType === 'res') {
-			this.receiveRequestResponse(subType, e.data.payload);
+		switch (type) {
+			case PROTOCOL_MESSAGE_TYPES.EVENT: {
+				this.receiveEvent(key, e.data.payload);
+				break;
+			}
+			case PROTOCOL_MESSAGE_TYPES.REQUEST: {
+				this.receiveRequest(key, e.data.payload);
+				break;
+			}
+			case PROTOCOL_MESSAGE_TYPES.RESPONSE: {
+				this.receiveRequestResponse(key, e.data.payload);
+				break;
+			}
+			default: {
+				this.debug(`received unknown message type: ${type}`);
+			}
 		}
-
 	}
 	receiveEvent(eventType, payload) {
 		if(this.eventHandlers[eventType] === undefined) {
@@ -182,15 +198,18 @@ export default class Port {
 						promise: resolve,
 					}
 				);
-			me.sendMessage(`req.${requestType}`,{id: id, args: args});
+			me.sendMessage(PROTOCOL_MESSAGE_TYPES.REQUEST, requestType, {id: id, args: args});
 		});
 	}
-	sendMessage(key, data) {
-		var message = {
-			key: `frau.${key}`,
+	sendMessage(type, key, data) {
+		const message = {
+			protocol: PROTOCOL_NAME,
+			version: PROTOCOL_VERSION,
+			type: type,
+			key: key,
 			payload: data
 		};
-		this.debug(`sending key: ${key}`);
+		this.debug(`sending message: ${type}.${key}`);
 		this.endpoint.postMessage(message, this.targetOrigin);
 		return this;
 	}
@@ -205,7 +224,7 @@ export default class Port {
 		return this.sendEventRaw(eventType, args);
 	}
 	sendEventRaw(eventType, data) {
-		return this.sendMessage(`evt.${eventType}`, data);
+		return this.sendMessage(PROTOCOL_MESSAGE_TYPES.EVENT, eventType, data);
 	}
 	sendRequestResponse(requestType) {
 
@@ -227,7 +246,7 @@ export default class Port {
 			Promise
 				.resolve(handlerResult)
 				.then((val) => {
-					me.sendMessage(`res.${requestType}`, { id: w.id, val: val });
+					me.sendMessage(PROTOCOL_MESSAGE_TYPES.RESPONSE, requestType, { id: w.id, val: val });
 				});
 		});
 
@@ -235,9 +254,9 @@ export default class Port {
 	static validateEvent(targetOrigin, endpoint, e) {
 		var isValid = (e.source === endpoint) &&
 			(targetOrigin === '*' || targetOrigin === e.origin) &&
-			(e.data.key !== undefined) &&
-			(e.data.key !== null) &&
-			(e.data.key.indexOf('frau.') === 0);
+			(e.data.protocol === PROTOCOL_NAME) &&
+			(e.data.version === PROTOCOL_VERSION);
+
 		return isValid;
 	}
 }
