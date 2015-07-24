@@ -1,5 +1,7 @@
 import Port from './port';
 
+import { HELLO } from './protocol';
+
 export default class Client extends Port {
 	constructor(options) {
 

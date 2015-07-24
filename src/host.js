@@ -1,6 +1,8 @@
 import Port from './port';
 import {default as resizer} from 'iframe-resizer';
 
+import { HELLO } from './protocol';
+
 var originRe = /^(http:\/\/|https:\/\/)[^\/]+/i;
 
 export default class Host extends Port {
@@ -28,7 +30,7 @@ export default class Host extends Port {
 	connect() {
 		var me = this;
 		return new Promise((resolve, reject) => {
-			me.onRequest('hello', function(id) {
+			me.onRequest(HELLO, function(id) {
 				super.connect();
 				resolve();
 				return id;

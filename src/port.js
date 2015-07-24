@@ -1,12 +1,6 @@
 const uuid = require('uuid');
 
-const PROTOCOL_NAME = 'ifrau';
-const PROTOCOL_VERSION = '2.0.0';
-const PROTOCOL_MESSAGE_TYPES = {
-	EVENT: 'evt',
-	REQUEST: 'req',
-	RESPONSE: 'res'
-};
+import PROTOCOL from './protocol';
 
 let typeNameValidator = /^[a-zA-Z]+[a-zA-Z\-]*$/;
 
@@ -116,15 +110,15 @@ export default class Port {
 		this.debug(`received message: ${type}.${key}`);
 
 		switch (type) {
-			case PROTOCOL_MESSAGE_TYPES.EVENT: {
+			case PROTOCOL.MESSAGE_TYPES.EVENT: {
 				this.receiveEvent(key, e.data.payload);
 				break;
 			}
-			case PROTOCOL_MESSAGE_TYPES.REQUEST: {
+			case PROTOCOL.MESSAGE_TYPES.REQUEST: {
 				this.receiveRequest(key, e.data.payload);
 				break;
 			}
-			case PROTOCOL_MESSAGE_TYPES.RESPONSE: {
+			case PROTOCOL.MESSAGE_TYPES.RESPONSE: {
 				this.receiveRequestResponse(key, e.data.payload);
 				break;
 			}
@@ -202,13 +196,13 @@ export default class Port {
 						promise: resolve,
 					}
 				);
-			me.sendMessage(PROTOCOL_MESSAGE_TYPES.REQUEST, requestType, {id: id, args: args});
+			me.sendMessage(PROTOCOL.MESSAGE_TYPES.REQUEST, requestType, {id: id, args: args});
 		});
 	}
 	sendMessage(type, key, data) {
 		const message = {
-			protocol: PROTOCOL_NAME,
-			version: PROTOCOL_VERSION,
+			protocol: PROTOCOL.NAME,
+			version: PROTOCOL.VERSION,
 			type: type,
 			key: key,
 			payload: data
@@ -228,7 +222,7 @@ export default class Port {
 		return this.sendEventRaw(eventType, args);
 	}
 	sendEventRaw(eventType, data) {
-		return this.sendMessage(PROTOCOL_MESSAGE_TYPES.EVENT, eventType, data);
+		return this.sendMessage(PROTOCOL.MESSAGE_TYPES.EVENT, eventType, data);
 	}
 	sendRequestResponse(requestType) {
 
@@ -250,7 +244,7 @@ export default class Port {
 			Promise
 				.resolve(handlerResult)
 				.then((val) => {
-					me.sendMessage(PROTOCOL_MESSAGE_TYPES.RESPONSE, requestType, { id: w.id, val: val });
+					me.sendMessage(PROTOCOL.MESSAGE_TYPES.RESPONSE, requestType, { id: w.id, val: val });
 				});
 		});
 
@@ -258,8 +252,8 @@ export default class Port {
 	static validateEvent(targetOrigin, endpoint, e) {
 		var isValid = (e.source === endpoint) &&
 			(targetOrigin === '*' || targetOrigin === e.origin) &&
-			(e.data.protocol === PROTOCOL_NAME) &&
-			(e.data.version === PROTOCOL_VERSION);
+			(e.data.protocol === PROTOCOL.NAME) &&
+			(e.data.version === PROTOCOL.VERSION);
 
 		return isValid;
 	}
