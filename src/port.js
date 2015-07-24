@@ -1,3 +1,5 @@
+const uuid = require('uuid');
+
 const PROTOCOL_NAME = 'ifrau';
 const PROTOCOL_VERSION = '2.0.0';
 const PROTOCOL_MESSAGE_TYPES = {
@@ -18,10 +20,12 @@ export default class Port {
 		this.isOpen = false;
 		this.pendingRequests = {};
 		this.requestHandlers = {};
-		this.requestId = 0;
 		this.services = {};
 		this.targetOrigin = targetOrigin;
 		this.waitingRequests = [];
+
+		this.id = uuid();
+		this.requestCounter = 0;
 	}
 	close() {
 		if(!this.isOpen) {
@@ -189,7 +193,7 @@ export default class Port {
 		}
 		var me = this;
 		return new Promise((resolve, reject) => {
-			var id = ++me.requestId;
+			const id = `${me.id}_${++me.requestCounter}`;
 			me.initHashArrAndPush(
 					me.pendingRequests,
 					requestType,

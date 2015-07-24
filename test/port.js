@@ -533,7 +533,7 @@ describe('port', () => {
 			sendMessage.should.have.been.calledWith(
 				'req',
 				'foo',
-				{ id: 1, args: [] }
+				{ id: `${port.id}_1`, args: [] }
 			);
 		});
 
@@ -542,7 +542,7 @@ describe('port', () => {
 			sendMessage.should.have.been.calledWith(
 				'req',
 				'foo',
-				{ id: 1, args: ['bar', true, -3] }
+				{ id: `${port.id}_1`, args: ['bar', true, -3] }
 			);
 		});
 
@@ -550,8 +550,8 @@ describe('port', () => {
 			port.connect();
 			port.request('foo');
 			port.request('bar');
-			sendMessage.should.have.been.calledWith('req', 'foo', { id: 1, args: [] } );
-			sendMessage.should.have.been.calledWith('req', 'bar', { id: 2, args: [] } );
+			sendMessage.should.have.been.calledWith('req', 'foo', { id: `${port.id}_1`, args: [] } );
+			sendMessage.should.have.been.calledWith('req', 'bar', { id: `${port.id}_2`, args: [] } );
 		});
 
 	});
