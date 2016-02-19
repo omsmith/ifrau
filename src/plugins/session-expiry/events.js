@@ -1,0 +1,7 @@
+'use strict';
+
+module.exports = {
+	ACTIVITY_EVENT: 'DiYbDb6RdN',
+	LISTEN_FOR_ACTIVITY_EVENT: 'vsSoFW0N3M',
+	STOP_LISTENING_FOR_ACTIVITY_EVENT: 'eR3IutjC5h'
+};
